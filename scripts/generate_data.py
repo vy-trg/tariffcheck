@@ -43,6 +43,8 @@ def main() -> None:
                 # Some days use more (hot day, guests), some less
                 day_factor = rng.uniform(0.8, 1.25)
             kwh = typical_kwh(t.hour) * day_factor * rng.uniform(0.7, 1.3)
+            writer.writerow([t.strftime("%Y-%m-%d %H:%M"), f"{kwh:.3f}"])
+            t += INTERVAL
     print(f"Wrote {DAYS * 48} rows to {OUTPUT}")
 
 
