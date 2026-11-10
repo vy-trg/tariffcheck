@@ -19,12 +19,10 @@ class FlatPlan:
     rate_c: Decimal
     supply_c: Decimal
 
-
-def flat_bill(readings: list[Reading], plan: FlatPlan) -> Decimal:
-    """Cost of the readings under a flat plan, in dollars (not rounded)."""
 def flat_bill(readings: list[Reading], plan: FlatPlan) -> Decimal:
     """Cost of the readings under a flat plan, in dollars (not rounded)."""
     total_kwh = sum((r.kwh for r in readings), Decimal(0))
     energy_c = total_kwh * plan.rate_c
-    supply_c = plan.supply_c  # one day for now; the next test will change this
+    days = {r.timestamp.date() for r in readings}
+    supply_c = len(days) * plan.supply_c
     return (energy_c + supply_c) / 100
