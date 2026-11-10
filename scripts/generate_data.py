@@ -19,15 +19,15 @@ OUTPUT = Path(__file__).resolve().parent.parent / "data" / "sample_usage.csv"
 
 def typical_kwh(hour: int) -> float:
     """Average kWh for one 30-minute interval at this hour of the day."""
-    if 0 <= hour < 6:     # night: fridge and standby only
+    if 0 <= hour < 6:  # night: fridge and standby only
         return 0.10
-    if 6 <= hour < 9:     # morning: kettle, shower, breakfast
+    if 6 <= hour < 9:  # morning: kettle, shower, breakfast
         return 0.40
-    if 9 <= hour < 16:    # day: house mostly empty
+    if 9 <= hour < 16:  # day: house mostly empty
         return 0.18
-    if 16 <= hour < 21:   # evening peak: cooking, aircon, TV
-        return 0.70        
-    return 0.25           # late evening
+    if 16 <= hour < 21:  # evening peak: cooking, aircon, TV
+        return 0.70
+    return 0.25  # late evening
 
 
 def main() -> None:

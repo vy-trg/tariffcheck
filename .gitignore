@@ -12,3 +12,4 @@ htmlcov/
 # Secrets and OS
 .env
 .DS_Store
+.coverage.*
