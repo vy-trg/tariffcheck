@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 
@@ -109,4 +109,74 @@ def block_bill(readings: list[Reading], plan: BlockPlan) -> Decimal:
         (_block_energy_c(kwh, plan.blocks) for kwh in daily.values()), Decimal(0)
     )
     supply_c = len(daily) * plan.supply_c
+    return (energy_c + supply_c) / 100
+
+
+@dataclass(frozen=True)
+class Window:
+    """A time-of-use period, e.g. peak 16:00-21:00. `end` is not included.
+
+    If `end` is earlier than `start`, the window crosses midnight (e.g. 21:00-11:00).
+    """
+
+    name: str
+    start: time
+    end: time
+    rate_c: Decimal
+
+    def contains(self, t: time) -> bool:
+        if self.start < self.end:
+            return self.start <= t < self.end
+        return t >= self.start or t < self.end
+
+
+@dataclass(frozen=True)
+class TOUPlan:
+    """Prices that depend on the time of day, plus a daily supply charge. Prices in cents."""
+
+    name: str
+    windows: tuple[Window, ...]
+    supply_c: Decimal
+
+    def __post_init__(self) -> None:
+        if not self.windows:
+            raise ValueError(f"{self.name}: needs at least one time window")
+        if self.supply_c < 0:
+            raise ValueError(f"{self.name}: supply charge cannot be negative")
+        for window in self.windows:
+            if window.rate_c < 0:
+                raise ValueError(f"{self.name}: {window.name} rate cannot be negative")
+            if window.start == window.end:
+                raise ValueError(
+                    f"{self.name}: {window.name} starts and ends at the same time"
+                )
+
+        # Every minute of the day must belong to exactly one window
+        minute = datetime(2000, 1, 1)
+        for _ in range(24 * 60):
+            matches = [w.name for w in self.windows if w.contains(minute.time())]
+            if len(matches) == 0:
+                raise ValueError(f"{self.name}: no window covers {minute:%H:%M}")
+            if len(matches) > 1:
+                raise ValueError(
+                    f"{self.name}: windows overlap at {minute:%H:%M} ({', '.join(matches)})"
+                )
+            minute += timedelta(minutes=1)
+
+    def window_at(self, t: time) -> Window:
+        """The window that covers time `t`. Exactly one does, checked when the plan is made."""
+        return next(w for w in self.windows if w.contains(t))
+
+
+def tou_bill(readings: list[Reading], plan: TOUPlan) -> Decimal:
+    """Cost of the readings under a time-of-use plan, in dollars (not rounded).
+
+    Each reading is priced by the window its start time falls in.
+    """
+    energy_c = sum(
+        (r.kwh * plan.window_at(r.timestamp.time()).rate_c for r in readings),
+        Decimal(0),
+    )
+    days = {r.timestamp.date() for r in readings}
+    supply_c = len(days) * plan.supply_c
     return (energy_c + supply_c) / 100
