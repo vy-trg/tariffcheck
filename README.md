@@ -4,6 +4,8 @@
 
 Find the cheapest Queensland electricity plan for how you actually use power.
 
+**Live demo:** https://tariffcheck.streamlit.app/
+
 ## The problem
 
 Households in Queensland can choose from dozens of electricity plans, but each one charges differently: a flat rate, stepped (block) rates, or different prices by time of day.
