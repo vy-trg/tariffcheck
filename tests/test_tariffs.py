@@ -36,7 +36,7 @@ def reading(day: int, hhmm: str, kwh: str) -> Reading:
 
 def test_flat_bill_one_day():
     # 10 kWh x 24.48c = 244.80c, plus 1 day supply 164.87c = 409.67c = $4.0967
-    assert flat_bill([reading(1, "18:00", "10")], NECTR_FLAT) == Decimal("4.0968")
+    assert flat_bill([reading(1, "18:00", "10")], NECTR_FLAT) == Decimal("4.0967")
 
 
 def test_flat_bill_zero_usage_still_pays_supply():
