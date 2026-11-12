@@ -2,6 +2,7 @@
 
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from typing import IO
 
 import pandas as pd
 
@@ -15,24 +16,29 @@ class UsageFileError(ValueError):
     """The usage CSV can't be used. The message says which line and why."""
 
 
-def load_usage(path: str | Path) -> list[Reading]:
-    """Read a `timestamp,kwh` CSV. Raise UsageFileError with a clear message if it is wrong."""
-    path = Path(path)
+def load_usage(source: str | Path | IO) -> list[Reading]:
+    """Read a `timestamp,kwh` CSV. Raise UsageFileError with a clear message if it is wrong.
+
+    `source` is a file path, or an open file such as a Streamlit upload.
+    """
+    if isinstance(source, (str, Path)):
+        source = Path(source)
+    name = Path(getattr(source, "name", "upload.csv")).name
     try:
         # Read everything as text: kWh goes straight into Decimal, never through float
-        df = pd.read_csv(path, dtype=str, keep_default_na=False)
+        df = pd.read_csv(source, dtype=str, keep_default_na=False)
     except pd.errors.EmptyDataError:
-        raise UsageFileError(f"{path.name}: the file is empty") from None
+        raise UsageFileError(f"{name}: the file is empty") from None
 
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
-        raise UsageFileError(f"{path.name}: missing column(s): {', '.join(missing)}")
+        raise UsageFileError(f"{name}: missing column(s): {', '.join(missing)}")
     if df.empty:
-        raise UsageFileError(f"{path.name}: no readings, only a header line")
+        raise UsageFileError(f"{name}: no readings, only a header line")
 
     # Line numbers as people see them in the file: the header is line 1
     def line(i: int) -> str:
-        return f"{path.name}, line {i + 2}"
+        return f"{name}, line {i + 2}"
 
     times = pd.to_datetime(df["timestamp"], format=TIMESTAMP_FORMAT, errors="coerce")
     bad_time = times.isna()

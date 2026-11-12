@@ -1,3 +1,4 @@
+import io
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
@@ -28,10 +29,13 @@ def test_loads_the_sample_data():
 
 
 def test_keeps_kwh_exact(tmp_path):
-    # As floats, 0.1 + 0.2 would be 0.30000000000000004
-    text = "timestamp,kwh\n2026-10-01 00:00,0.1\n2026-10-01 00:30,0.2\n"
-    readings = load_usage(write_csv(tmp_path, text))
-    assert sum(r.kwh for r in readings) == Decimal("0.3")
+    path = write_csv(
+        tmp_path, "timestamp,kwh\n2026-10-01 00:00,0.1\n2026-10-01 00:30,0.2\n"
+    )
+    readings = load_usage(path)
+    assert sum(r.kwh for r in readings) == Decimal(
+        "0.3"
+    )  # would be 0.30000000000000004 as float
 
 
 def test_column_order_does_not_matter(tmp_path):
@@ -75,3 +79,16 @@ def test_broken_file_gives_a_clear_error(tmp_path, text, message):
     with pytest.raises(UsageFileError) as error:
         load_usage(path)
     assert message in str(error.value)
+
+
+def test_reads_an_open_file_like_a_streamlit_upload():
+    upload = io.StringIO("timestamp,kwh\n2026-10-01 18:00,0.5\n")
+    upload.name = "my_meter.csv"
+    assert load_usage(upload) == [Reading(datetime(2026, 10, 1, 18, 0), Decimal("0.5"))]
+
+
+def test_error_from_an_upload_names_the_uploaded_file():
+    upload = io.StringIO("timestamp,kwh\n2026-10-01 18:00,-1\n")
+    upload.name = "my_meter.csv"
+    with pytest.raises(UsageFileError, match="my_meter.csv, line 2"):
+        load_usage(upload)
