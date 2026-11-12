@@ -1,5 +1,7 @@
 # TariffCheck ⚡
 
+[![CI](https://github.com/vy-trg/tariffcheck/actions/workflows/ci.yml/badge.svg)](https://github.com/vy-trg/tariffcheck/actions/workflows/ci.yml)
+
 Find the cheapest Queensland electricity plan for how you actually use power.
 
 ## The problem
