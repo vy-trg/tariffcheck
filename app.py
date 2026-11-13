@@ -46,6 +46,26 @@ CSS = """
 .tc-note {background:#FFFEA4;padding:10px 12px;border-radius:8px;font-size:0.9rem}
 .tc-chip {background:#F1F1EE;border:1px solid #D9D8D0;border-radius:99px;
           padding:2px 10px;font-size:0.8rem}
+.tc-steps {display:flex;gap:28px;margin:0 0 8px 4px;font-size:0.95rem;color:#50514C}
+.tc-steps span::before {content:attr(data-n);display:inline-grid;place-items:center;
+          width:22px;height:22px;margin-right:6px;border-radius:50%;
+          background:#FBE53A;color:#1A1A1A;font-weight:600;font-size:0.8rem}
+
+/* Motion: only for people who haven't asked their device to reduce it */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes tc-enter {from {opacity:0; transform:translateY(6px)} to {opacity:1; transform:none}}
+  @keyframes tc-pulse {0% {box-shadow:0 0 0 0 rgba(251,229,58,.9)}
+                       100% {box-shadow:0 0 0 10px rgba(251,229,58,0)}}
+  /* Plan cards fade up with ease-out, 30 ms apart, so the eye reads cheapest first */
+  .st-key-plan-0, .st-key-plan-1, .st-key-plan-2 {animation:tc-enter 200ms ease-out both}
+  .st-key-plan-1 {animation-delay:30ms}
+  .st-key-plan-2 {animation-delay:60ms}
+  /* The cheapest ribbon pulses once to confirm the answer */
+  .tc-ribbon {animation:tc-pulse 600ms ease-out 250ms 1}
+  /* Buttons shrink slightly while pressed, no bounce */
+  button {transition:transform 100ms ease-out}
+  button:active {transform:scale(0.97)}
+}
 </style>
 """
 
@@ -53,6 +73,10 @@ st.set_page_config(page_title="TariffCheck", page_icon="⚡", layout="wide")
 st.html(CSS)
 st.html(
     '<div class="tc-bar"><b>⚡ TariffCheck</b> · compare Queensland electricity plans on your own usage</div>'
+)
+st.html(
+    '<div class="tc-steps"><span data-n="1">Your usage</span>'
+    '<span data-n="2">Choose plans</span><span data-n="3">See results</span></div>'
 )
 
 side, main = st.columns([1, 3], gap="large")
@@ -64,10 +88,23 @@ with side:
     try:
         readings = load_usage(source)
     except UsageFileError as error:
-        st.error(f"We couldn't read that file. {error}")
-        st.stop()
+        st.error(
+            f"Hmm, this file doesn't look quite right. {error}.\n\n"
+            "Each line needs a time and the kWh used, like `2026-10-01 18:30,0.25`. "
+            "The sample file below shows the format."
+        )
+        readings = None
     if upload is None:
         st.caption("Showing sample data. Upload your own file above.")
+    elif readings and st.session_state.get("toasted") != upload.file_id:
+        # Confirm the upload once, not on every rerun
+        st.session_state["toasted"] = upload.file_id
+        st.toast(f"Loaded {len(readings):,} readings from {upload.name}", icon="✅")
+    st.download_button(
+        "Download sample file", SAMPLE.read_bytes(), "sample_usage.csv", "text/csv"
+    )
+    if readings is None:
+        st.stop()
     days = days_covered(readings)
     st.markdown(
         f"**{days} days** of readings  \n"
@@ -84,14 +121,16 @@ with side:
 
 with main:
     if not chosen:
-        st.warning("Tick at least one plan to compare.")
+        st.warning(
+            "No plans picked yet. Tick at least one plan on the left to see your estimate."
+        )
         st.stop()
     result = compare_plans(readings, [PLANS[n] for n in chosen])
 
     st.subheader(f"3 · {len(chosen)} plans, cheapest first")
-    for row in result.rows:
+    for i, row in enumerate(result.rows):
         retailer, kind, plan_id, rates = PLAN_INFO[row.name]
-        with st.container(border=True):
+        with st.container(border=True, key=f"plan-{i}"):
             if row.name in result.cheapest and len(chosen) > 1:
                 st.html(
                     f'<span class="tc-ribbon">Cheapest for your usage · saves '
@@ -110,6 +149,15 @@ with main:
             left.caption(
                 f"{days}-day bill: ${row.total} = energy ${row.energy} + supply ${row.supply}"
             )
+
+    with st.expander("How we work out these estimates"):
+        st.markdown(
+            f"- We price every half-hour reading in your file under each plan's published rates.\n"
+            f"- Daily supply charge × the {days} days in your file is added on top.\n"
+            "- The yearly figure scales your bill up to 365 days, so a summer file "
+            "will overstate winter months and the other way round.\n"
+            "- Discounts, solar feed-in, concessions and demand charges are not included."
+        )
 
     st.subheader("Estimated yearly cost")
     costs = pd.DataFrame(
