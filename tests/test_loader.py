@@ -92,3 +92,8 @@ def test_error_from_an_upload_names_the_uploaded_file():
     upload.name = "my_meter.csv"
     with pytest.raises(UsageFileError, match="my_meter.csv, line 2"):
         load_usage(upload)
+
+
+def test_column_names_ignore_case_and_spaces(tmp_path):
+    path = write_csv(tmp_path, "Timestamp, kWh \n2026-10-01 18:00,0.5\n")
+    assert load_usage(path) == [Reading(datetime(2026, 10, 1, 18, 0), Decimal("0.5"))]

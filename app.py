@@ -18,6 +18,7 @@ from tariffcheck.usage import (
 
 SAMPLE = Path(__file__).parent / "data" / "sample_usage.csv"
 PEAK = NECTR_TOU.windows[0]
+MIN_DAYS_FOR_YEARLY = 28  # fewer days than this and the yearly figure is a rough guess
 
 # Text shown on each card. Prices themselves come from the plan objects.
 PLAN_INFO = {
@@ -46,7 +47,8 @@ CSS = """
 .tc-note {background:#FFFEA4;padding:10px 12px;border-radius:8px;font-size:0.9rem}
 .tc-chip {background:#F1F1EE;border:1px solid #D9D8D0;border-radius:99px;
           padding:2px 10px;font-size:0.8rem}
-.tc-steps {display:flex;gap:28px;margin:0 0 8px 4px;font-size:0.95rem;color:#50514C}
+.tc-steps {display:flex;flex-wrap:wrap;gap:8px 20px;margin:0 0 8px 4px;font-size:0.95rem;color:#50514C}
+.tc-steps span {white-space:nowrap}
 .tc-steps span::before {content:attr(data-n);display:inline-grid;place-items:center;
           width:22px;height:22px;margin-right:6px;border-radius:50%;
           background:#FBE53A;color:#1A1A1A;font-weight:600;font-size:0.8rem}
@@ -107,7 +109,7 @@ with side:
         st.stop()
     days = days_covered(readings)
     st.markdown(
-        f"**{days} days** of readings  \n"
+        f"**{days} day{'' if days == 1 else 's'}** of readings  \n"
         f"**{average_daily_kwh(readings):.1f} kWh** a day on average  \n"
         f"**{share_in_window(readings, PEAK):.0%}** used 4–9 pm"
     )
@@ -126,6 +128,11 @@ with main:
         )
         st.stop()
     result = compare_plans(readings, [PLANS[n] for n in chosen])
+    if days < MIN_DAYS_FOR_YEARLY:
+        st.info(
+            f"Your file covers {days} day{'' if days == 1 else 's'}, so the yearly figures "
+            "are a rough guess. A month or more of readings gives a much better estimate."
+        )
 
     st.subheader(f"3 · {len(chosen)} plans, cheapest first")
     for i, row in enumerate(result.rows):

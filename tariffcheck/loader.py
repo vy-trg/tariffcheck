@@ -30,6 +30,8 @@ def load_usage(source: str | Path | IO) -> list[Reading]:
     except pd.errors.EmptyDataError:
         raise UsageFileError(f"{name}: the file is empty") from None
 
+    # "Timestamp", " kWh " and "kwh" all mean the same column
+    df.columns = [str(c).strip().lower() for c in df.columns]
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
         raise UsageFileError(f"{name}: missing column(s): {', '.join(missing)}")

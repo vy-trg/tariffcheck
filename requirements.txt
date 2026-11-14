@@ -38,5 +38,3 @@ tzdata==2026.6
 urllib3==2.8.0
 uvicorn==0.54.0
 websockets==17.4
-streamlit==1.67.0
-altair==6.3.0
