@@ -30,9 +30,9 @@ Coverage: 100% of lines and branches in `tariffcheck/`. CI fails below 90%.
 | M7 | Upload a file with `Timestamp,kWh` header | Loads normally | **Fail**, see bug 1 |
 | M8 | Upload a file with one day of readings | Says "1 day" | **Fail**, see bug 2 |
 | M9 | Upload a file with one day of readings | Warns that the yearly figure is a rough guess | **Fail**, see bug 3 |
-| M10 | Download sample file, then upload it | Same result as M1 | _check_ |
-| M11 | Phone width (390 px) | Columns stack, nothing cut off | _check_ |
-| M12 | Turn on "Reduce motion" in macOS | Cards appear with no animation | _check_ |
+| M10 | Download sample file, then upload it | Same result as M1 | Pass |
+| M11 | Phone width (393 px and 360 px) | Columns stack, nothing cut off | **Fail → fixed**, see bug 4 |
+| M12 | Emulate "prefers-reduced-motion: reduce" in Chrome DevTools | Cards appear with no animation | Pass |
 | M13 | Check every plan price against Energy Made Easy | All rates and supply charges match `docs/design.md` | Pass |
 
 ## 3. Bugs found
@@ -42,6 +42,7 @@ Coverage: 100% of lines and branches in `tariffcheck/`. CI fails below 90%.
 | 1 | Header `Timestamp,kWh` is rejected as "missing column(s)" even though the columns are there | High: blocks real users | Fixed, with test |
 | 2 | "1 days of readings" | Low: wording | Fixed |
 | 3 | A file with a few days is scaled up to a full year with no warning | Medium: misleading number | Fixed: warning under 28 days |
+| 4 | On narrow phones the step bar could break labels mid-word ("Your / usage") | Low: layout | Fixed: whole steps wrap instead |
 
 ## 4. Not tested / out of scope
 
